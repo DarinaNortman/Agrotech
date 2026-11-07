@@ -1,0 +1,1446 @@
+import React, { useState, useEffect } from "react";
+
+// ================= ПАЛИТРА =================
+const P = {
+  mint: "#d4e9dd", lavender: "#e0d9ee", peach: "#fde4d4",
+  cream: "#fdf6e3", sage: "#c8d8c9", sky: "#d6e8f0",
+  dark: "#3d5a4a", gray: "#8a9a8f", white: "#fff",
+  bg: "#f7faf8", green: "#6fa87f", amber: "#e8b87a",
+  red: "#d98b8b", blue: "#8fb8d4", softRed: "#f5d5d5",
+};
+
+// ================= НАЧАЛЬНЫЕ ДАННЫЕ =================
+const INITIAL_HERDS = [
+  { id: "h1", name: "Дойное стадо №1", count: 120, location: "Пастбище Северное", accent: P.mint },
+  { id: "h2", name: "Сухостойные",     count: 34,  location: "Пастбище Южное",   accent: P.lavender },
+  { id: "h3", name: "Молодняк",        count: 58,  location: "Загон Восточный",  accent: P.peach },
+  { id: "h4", name: "Первотёлки",      count: 22,  location: "Загон Западный",   accent: P.sky },
+];
+
+const INITIAL_COWS = [
+  {
+    id: 101, name: "Ромашка", breed: "Голштинская", earTag: "RU-00101",
+    herdId: "h1", age: "4 года", weight: 620, inside: true, lat: 55.760, lon: 37.620,
+    vitals: { hr: 68, resp: 24, temp: 38.6, rum: 480, act: 45, hrv: 32 },
+    health: { score: 87, risks: [{ l: "Кетоз", p: 22 }, { l: "Мастит", p: 8 }], meds: [] },
+    vax: [
+      { n: "Ящур", d: "2026-02-10", u: "2027-02-10", s: "valid" },
+      { n: "Пастереллёз", d: "2025-11-20", u: "2026-11-20", s: "expiring" },
+      { n: "ИРТ/ПВИ", d: "2025-06-15", u: "2026-06-15", s: "expired" },
+    ],
+    collar: { id: "A3F2", battery: 3850, signal: 4, lastSync: "2 мин", firmware: "v1.0" },
+    stats: { week: [42,48,45,50,47,44,45], month: Array(30).fill(0).map((_,i)=>40+Math.round(Math.sin(i)*8)), half: Array(30).fill(46), year: Array(12).fill(45) },
+  },
+  {
+    id: 102, name: "Зорька", breed: "Симментальская", earTag: "RU-00102",
+    herdId: "h1", age: "5 лет", weight: 680, inside: false, lat: 55.780, lon: 37.650,
+    vitals: { hr: 92, resp: 34, temp: 39.4, rum: 320, act: 12, hrv: 21 },
+    health: { score: 54, risks: [{ l: "Кетоз", p: 45 }, { l: "Мастит", p: 31 }], meds: [{ n: "Цефтиофур", d: "2026-10-05", u: "2026-10-12" }] },
+    vax: [
+      { n: "Ящур", d: "2026-02-10", u: "2027-02-10", s: "valid" },
+      { n: "Сибирская язва", d: "2026-04-01", u: "2027-04-01", s: "valid" },
+    ],
+    collar: { id: "A3F3", battery: 3700, signal: 2, lastSync: "15 мин", firmware: "v1.0" },
+    stats: { week: [15,12,10,8,14,12,12], month: Array(30).fill(12), half: Array(30).fill(13), year: Array(12).fill(12) },
+  },
+  {
+    id: 103, name: "Бурёнка", breed: "Чёрно-пёстрая", earTag: "RU-00103",
+    herdId: "h2", age: "6 лет", weight: 590, inside: true, lat: 55.740, lon: 37.590,
+    vitals: { hr: 62, resp: 22, temp: 38.4, rum: 520, act: 88, hrv: 38 },
+    health: { score: 92, risks: [], meds: [] },
+    vax: [{ n: "Ящур", d: "2026-02-10", u: "2027-02-10", s: "valid" }],
+    collar: { id: "A3F4", battery: 3920, signal: 5, lastSync: "1 мин", firmware: "v1.0" },
+    stats: { week: [85,88,90,87,89,86,88], month: Array(30).fill(88), half: Array(30).fill(87), year: Array(12).fill(88) },
+  },
+  {
+    id: 104, name: "Милашка", breed: "Айрширская", earTag: "RU-00104",
+    herdId: "h3", age: "1 год", weight: 340, inside: true, lat: 55.750, lon: 37.600,
+    vitals: { hr: 78, resp: 26, temp: 38.8, rum: 440, act: 110, hrv: 35 },
+    health: { score: 78, risks: [{ l: "Хромота", p: 12 }], meds: [] },
+    vax: [{ n: "Пастереллёз", d: "2025-11-20", u: "2026-11-20", s: "expiring" }],
+    collar: { id: "A3F5", battery: 3500, signal: 4, lastSync: "5 мин", firmware: "v1.0" },
+    stats: { week: [105,108,110,112,109,111,110], month: Array(30).fill(110), half: Array(30).fill(108), year: Array(12).fill(109) },
+  },
+  {
+    id: 105, name: "Снежинка", breed: "Голштинская", earTag: "RU-00105",
+    herdId: "h4", age: "2 года", weight: 480, inside: true, lat: 55.745, lon: 37.585,
+    vitals: { hr: 70, resp: 25, temp: 38.5, rum: 460, act: 55, hrv: 30 },
+    health: { score: 82, risks: [{ l: "Кетоз", p: 15 }], meds: [] },
+    vax: [{ n: "Ящур", d: "2026-02-10", u: "2027-02-10", s: "valid" }],
+    collar: { id: "A3F6", battery: 3800, signal: 4, lastSync: "3 мин", firmware: "v1.0" },
+    stats: { week: [50,52,55,58,54,53,55], month: Array(30).fill(54), half: Array(30).fill(55), year: Array(12).fill(54) },
+  },
+];
+
+const norms = {
+  hr:   { min: 48, max: 84, l: "уд/мин" },
+  resp: { min: 10, max: 30, l: "дых/мин" },
+  temp: { min: 38.0, max: 39.3, l: "°C" },
+  rum:  { min: 400, max: 600, l: "мин/день" },
+  act:  { min: 20, max: 200, l: "шаг/мин" },
+  hrv:  { min: 25, max: 60, l: "мс" },
+};
+const vStatus = (k, v) => {
+  const n = norms[k]; if (!n) return { c: P.gray, t: "—" };
+  if (v < n.min) return { c: P.amber, t: "↓" };
+  if (v > n.max) return { c: P.red, t: "↑" };
+  return { c: P.green, t: "✓" };
+};
+const vaxStatus = s => ({
+  valid:    { c: P.green, t: "Активна" },
+  expiring: { c: P.amber, t: "Истекает" },
+  expired:  { c: P.red, t: "Просрочена" },
+}[s] || { c: P.gray, t: "—" });
+
+// ================= TOAST =================
+function Toast({ msg, type, onClose }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 3000);
+    return () => clearTimeout(t);
+  }, [onClose]);
+  const bg = { success: P.green, error: P.red, info: P.blue, warning: P.amber }[type] || P.dark;
+  return (
+    <div style={{
+      position: "fixed", bottom: 24, right: 24, zIndex: 9999,
+      background: bg, color: P.white, padding: "14px 20px", borderRadius: 12,
+      boxShadow: "0 8px 24px rgba(0,0,0,0.2)", fontWeight: 600, fontSize: 13,
+      display: "flex", alignItems: "center", gap: 12, minWidth: 260,
+    }}>
+      <span style={{ fontSize: 18 }}>
+        {type === "success" ? "✓" : type === "error" ? "✕" : type === "warning" ? "⚠" : "ℹ"}
+      </span>
+      {msg}
+    </div>
+  );
+}
+
+// ================= МОДАЛЬНОЕ ОКНО =================
+function Modal({ title, onClose, children, width = 500 }) {
+  return (
+    <div onClick={onClose} style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      zIndex: 9998, padding: 20,
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: P.white, borderRadius: 20, padding: 28, width, maxWidth: "100%",
+        maxHeight: "90vh", overflow: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: P.dark }}>{title}</div>
+          <div onClick={onClose} style={{
+            cursor: "pointer", fontSize: 22, color: P.gray,
+            width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center",
+            borderRadius: 8,
+          }}>×</div>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ================= HEADER =================
+function Header({ page, setPage, notifications, onBellClick, bellOpen, onRefresh, lastUpdate, refreshing }) {
+  const items = [
+    { id: "home", l: "Главная" },
+    { id: "dashboard", l: "Дашборд" },
+    { id: "stats", l: "Статистика" },
+    { id: "about", l: "О проекте" },
+  ];
+  return (
+    <div style={{
+      background: P.dark, color: P.white, padding: "14px 40px",
+      display: "flex", justifyContent: "space-between", alignItems: "center",
+      boxShadow: "0 2px 12px rgba(61,90,74,0.15)", position: "sticky", top: 0, zIndex: 100,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ fontSize: 26 }}>🐄</div>
+        <div>
+          <div style={{ fontSize: 17, fontWeight: 800 }}>HerdGuard</div>
+          <div style={{ fontSize: 10, opacity: 0.7 }}>Умный ошейник · v1.0</div>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 4 }}>
+        {items.map(i => (
+          <div key={i.id} onClick={() => setPage(i.id)}
+            style={{
+              padding: "9px 16px", borderRadius: 10, cursor: "pointer",
+              background: page === i.id ? "rgba(255,255,255,0.15)" : "transparent",
+              fontSize: 13, fontWeight: page === i.id ? 700 : 500,
+              transition: "0.2s",
+            }}>{i.l}</div>
+        ))}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div onClick={onRefresh} style={{
+          background: "rgba(255,255,255,0.1)", padding: "8px 14px",
+          borderRadius: 10, cursor: "pointer", fontSize: 12, fontWeight: 600,
+          display: "flex", alignItems: "center", gap: 6,
+        }}>
+          <span style={{ display: "inline-block", animation: refreshing ? "spin 1s linear infinite" : "none" }}>🔄</span>
+          {refreshing ? "Обновление..." : lastUpdate}
+        </div>
+        <div onClick={onBellClick} style={{
+          position: "relative", cursor: "pointer", padding: 8, borderRadius: 10,
+          background: bellOpen ? "rgba(255,255,255,0.15)" : "transparent",
+        }}>
+          <span style={{ fontSize: 18 }}>🔔</span>
+          {notifications.length > 0 && (
+            <div style={{
+              position: "absolute", top: 4, right: 4, width: 16, height: 16,
+              borderRadius: 8, background: P.red, fontSize: 9, fontWeight: 700,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>{notifications.length}</div>
+          )}
+        </div>
+        <div style={{
+          background: P.green, padding: "6px 14px", borderRadius: 12,
+          fontSize: 11, fontWeight: 700,
+        }}>● 212 онлайн</div>
+      </div>
+    </div>
+  );
+}
+
+// ================= СПИСОК УВЕДОМЛЕНИЙ =================
+function NotificationsPanel({ notifications, onClose }) {
+  return (
+    <div style={{
+      position: "absolute", top: 70, right: 200, width: 340,
+      background: P.white, borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+      zIndex: 200, overflow: "hidden",
+    }}>
+      <div style={{
+        padding: "16px 20px", borderBottom: `1px solid ${P.sage}`,
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+      }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: P.dark }}>Уведомления</div>
+        <div onClick={onClose} style={{ cursor: "pointer", color: P.gray }}>×</div>
+      </div>
+      <div style={{ maxHeight: 400, overflow: "auto" }}>
+        {notifications.length === 0 ? (
+          <div style={{ padding: 30, textAlign: "center", color: P.gray, fontSize: 13 }}>
+            Нет новых уведомлений
+          </div>
+        ) : notifications.map((n, i) => (
+          <div key={i} style={{
+            padding: "12px 20px", borderBottom: `1px solid ${P.sage}`,
+            background: i === 0 ? P.cream : P.white,
+          }}>
+            <div style={{ display: "flex", gap: 10 }}>
+              <span style={{ fontSize: 18 }}>{n.icon}</span>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: P.dark }}>{n.title}</div>
+                <div style={{ fontSize: 11, color: P.gray, marginTop: 2 }}>{n.time}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ================= ГЛАВНАЯ =================
+function PageHome({ setPage }) {
+  return (
+    <div style={{ background: P.bg, minHeight: "100vh" }}>
+      <div style={{ padding: "60px 40px 40px", background: `linear-gradient(135deg, ${P.mint} 0%, ${P.sky} 100%)` }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <div style={{
+            display: "inline-block", background: P.white, padding: "6px 16px",
+            borderRadius: 20, fontSize: 12, fontWeight: 700, color: P.dark, marginBottom: 20,
+          }}>🚀 Проект для защиты · 2026</div>
+          <div style={{ fontSize: 54, fontWeight: 900, color: P.dark, lineHeight: 1.1, maxWidth: 800 }}>
+            Умный ошейник для<br />удалённых пастбищ
+          </div>
+          <div style={{ fontSize: 18, color: P.dark, opacity: 0.75, marginTop: 20, maxWidth: 700, lineHeight: 1.6 }}>
+            Мониторинг здоровья КРС, виртуальное ограждение и передача данных
+            через LoRa там, где нет сотовой связи.
+          </div>
+          <div style={{ display: "flex", gap: 12, marginTop: 32 }}>
+            <div onClick={() => setPage("dashboard")} style={{
+              background: P.dark, color: P.white, padding: "14px 28px",
+              borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 14,
+            }}>Открыть дашборд →</div>
+            <div onClick={() => setPage("about")} style={{
+              background: P.white, color: P.dark, padding: "14px 28px",
+              borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 14,
+            }}>О технологиях</div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "60px 40px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+          <div style={{ background: P.peach, borderRadius: 20, padding: 32 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: P.dark, opacity: 0.7, marginBottom: 10 }}>ПРОБЛЕМА</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: P.dark, marginBottom: 16 }}>
+              Пастбища далеко, заборы дорого
+            </div>
+            <ul style={{ fontSize: 14, color: P.dark, lineHeight: 2, paddingLeft: 18 }}>
+              <li>Физические заборы стоят 300 000+ ₽ / км</li>
+              <li>Нет сотовой связи в глухих районах</li>
+              <li>Болезни выявляются с задержкой 3–5 дней</li>
+              <li>Нужен постоянный пастух на выпасе</li>
+            </ul>
+          </div>
+          <div style={{ background: P.mint, borderRadius: 20, padding: 32 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: P.dark, opacity: 0.7, marginBottom: 10 }}>РЕШЕНИЕ</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: P.dark, marginBottom: 16 }}>
+              Ошейник + LoRa + ИИ-аналитика
+            </div>
+            <ul style={{ fontSize: 14, color: P.dark, lineHeight: 2, paddingLeft: 18 }}>
+              <li>GPS + 6 датчиков на борту</li>
+              <li>Дальность LoRa до 15 км</li>
+              <li>Автономность 12–20 месяцев</li>
+              <li>Раннее выявление мастита (92%)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ background: P.cream, padding: "50px 40px" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <div style={{ fontSize: 28, fontWeight: 800, color: P.dark, textAlign: "center", marginBottom: 32 }}>
+            Ключевые показатели
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
+            {[
+              { n: "92%", l: "точность выявления мастита" },
+              { n: "15 км", l: "дальность связи по LoRa" },
+              { n: "20 мес", l: "автономность с солнцем" },
+              { n: "36 ч", l: "экономия времени ветеринара" },
+            ].map((s, i) => (
+              <div key={i} style={{ background: P.white, borderRadius: 16, padding: 24, textAlign: "center" }}>
+                <div style={{ fontSize: 40, fontWeight: 900, color: P.dark }}>{s.n}</div>
+                <div style={{ fontSize: 12, color: P.gray, marginTop: 6 }}>{s.l}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ================= ДАШБОРД =================
+function PageDashboard({ cows, herds, onAddCow, showToast }) {
+  const [herd, setHerd] = useState(null);
+  const [cow, setCow] = useState(null);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [sort, setSort] = useState("id");
+  const [tab, setTab] = useState("vitals");
+  const [addOpen, setAddOpen] = useState(false);
+
+  if (cow) {
+    return <CowDetail
+      cow={cow} cows={cows} tab={tab} setTab={setTab}
+      onBack={() => setCow(null)}
+      onUpdate={(updated) => {
+        // обновление через родителя
+        const idx = cows.findIndex(c => c.id === updated.id);
+        if (idx >= 0) cows[idx] = updated;
+        setCow({ ...updated });
+        showToast("Данные обновлены", "success");
+      }}
+      showToast={showToast}
+    />;
+  }
+
+  if (herd) {
+    // Фильтрация и сортировка
+    let list = cows.filter(c => c.herdId === herd.id);
+    if (search) {
+      const s = search.toLowerCase();
+      list = list.filter(c =>
+        c.name.toLowerCase().includes(s) ||
+        String(c.id).includes(s) ||
+        c.earTag.toLowerCase().includes(s)
+      );
+    }
+    if (filter === "inside") list = list.filter(c => c.inside);
+    if (filter === "outside") list = list.filter(c => !c.inside);
+    if (filter === "sick") list = list.filter(c => c.health.score < 70);
+    list = [...list].sort((a, b) => {
+      if (sort === "id") return a.id - b.id;
+      if (sort === "name") return a.name.localeCompare(b.name);
+      if (sort === "health") return b.health.score - a.health.score;
+      return 0;
+    });
+
+    return (
+      <div style={{ background: P.bg, minHeight: "100vh", padding: "40px" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          <div onClick={() => setHerd(null)} style={{
+            cursor: "pointer", color: P.gray, fontSize: 13, marginBottom: 12, fontWeight: 600,
+          }}>← Все стада</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <div>
+              <div style={{ fontSize: 32, fontWeight: 800, color: P.dark }}>{herd.name}</div>
+              <div style={{ fontSize: 14, color: P.gray, marginTop: 4 }}>
+                {cows.filter(c => c.herdId === herd.id).length} животных · {herd.location}
+              </div>
+            </div>
+            <button onClick={() => setAddOpen(true)} style={{
+              background: P.dark, color: P.white, padding: "12px 20px", border: "none",
+              borderRadius: 12, fontWeight: 700, fontSize: 13, cursor: "pointer",
+            }}>➕ Добавить корову</button>
+          </div>
+
+          {/* Панель фильтров */}
+          <div style={{
+            background: P.white, borderRadius: 16, padding: 16, marginBottom: 20,
+            display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap",
+          }}>
+            <input
+              type="text" placeholder="🔍 Поиск по кличке, ID или бирке..."
+              value={search} onChange={e => setSearch(e.target.value)}
+              style={{
+                flex: 1, minWidth: 200, padding: "10px 14px",
+                border: `2px solid ${P.sage}`, borderRadius: 10, fontSize: 13,
+                outline: "none", color: P.dark,
+              }}
+            />
+            <div style={{ display: "flex", gap: 4 }}>
+              {[
+                { id: "all", l: "Все" },
+                { id: "inside", l: "В загоне" },
+                { id: "outside", l: "Вне" },
+                { id: "sick", l: "Больные" },
+              ].map(f => (
+                <div key={f.id} onClick={() => setFilter(f.id)}
+                  style={{
+                    padding: "8px 14px", borderRadius: 10, cursor: "pointer",
+                    background: filter === f.id ? P.dark : P.sage,
+                    color: filter === f.id ? P.white : P.dark,
+                    fontSize: 12, fontWeight: 700,
+                  }}>{f.l}</div>
+              ))}
+            </div>
+            <select value={sort} onChange={e => setSort(e.target.value)}
+              style={{
+                padding: "10px 14px", border: `2px solid ${P.sage}`,
+                borderRadius: 10, fontSize: 12, color: P.dark,
+                fontWeight: 700, outline: "none", cursor: "pointer",
+              }}>
+              <option value="id">Сорт: по ID</option>
+              <option value="name">Сорт: по имени</option>
+              <option value="health">Сорт: по здоровью</option>
+            </select>
+          </div>
+
+          {/* Список */}
+          {list.length === 0 ? (
+            <div style={{
+              background: P.white, borderRadius: 16, padding: 40, textAlign: "center",
+              color: P.gray, fontSize: 14,
+            }}>
+              🔍 Ничего не найдено
+            </div>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+              {list.map(c => (
+                <div key={c.id} onClick={() => { setCow(c); setTab("vitals"); }}
+                  style={{
+                    background: P.white, borderRadius: 16, padding: 20,
+                    cursor: "pointer", boxShadow: "0 2px 12px rgba(61,90,74,0.06)",
+                    borderTop: `4px solid ${c.inside ? P.green : P.red}`,
+                    transition: "transform 0.2s",
+                  }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: P.dark }}>
+                        #{c.id} {c.name}
+                      </div>
+                      <div style={{ fontSize: 11, color: P.gray, marginTop: 2 }}>
+                        {c.breed} · {c.age}
+                      </div>
+                    </div>
+                    <div style={{
+                      fontSize: 10, fontWeight: 700, color: P.white, padding: "4px 10px",
+                      borderRadius: 10, background: c.inside ? P.green : P.red, height: "fit-content",
+                    }}>{c.inside ? "В ЗАГОНЕ" : "ВНЕ"}</div>
+                  </div>
+                  <div style={{ display: "flex", gap: 12, fontSize: 12, color: P.gray }}>
+                    <span>❤ {c.vitals.hr}</span>
+                    <span>🌡 {c.vitals.temp}°C</span>
+                    <span>🩺 {c.health.score}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {addOpen && <AddCowModal
+          onClose={() => setAddOpen(false)}
+          onAdd={data => {
+            onAddCow({ ...data, herdId: herd.id });
+            setAddOpen(false);
+            showToast(`Корова ${data.name} добавлена`, "success");
+          }}
+        />}
+      </div>
+    );
+  }
+
+  // Общий список стад
+  return (
+    <div style={{ background: P.bg, minHeight: "100vh", padding: "40px" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <div style={{ fontSize: 32, fontWeight: 800, color: P.dark, marginBottom: 8 }}>Дашборд</div>
+        <div style={{ fontSize: 14, color: P.gray, marginBottom: 32 }}>
+          Выберите стадо для просмотра животных
+        </div>
+
+        {cows.filter(c => !c.inside).length > 0 && (
+          <div style={{
+            background: P.peach, borderRadius: 16, padding: 20, marginBottom: 24,
+            borderLeft: `5px solid ${P.red}`,
+          }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: P.dark, marginBottom: 8 }}>
+              ⚠️ Требуют внимания ({cows.filter(c => !c.inside).length})
+            </div>
+            <div style={{ fontSize: 13, color: P.dark }}>
+              {cows.filter(c => !c.inside).map(c => `#${c.id} ${c.name}`).join(", ")} — вне загона
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
+          {herds.map(h => {
+            const inHerd = cows.filter(c => c.herdId === h.id);
+            const alerts = inHerd.filter(c => !c.inside || c.health.score < 70).length;
+            return (
+              <div key={h.id} onClick={() => setHerd(h)}
+                style={{
+                  background: h.accent, borderRadius: 20, padding: 24,
+                  cursor: "pointer", boxShadow: "0 4px 16px rgba(61,90,74,0.08)",
+                  transition: "transform 0.2s",
+                }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
+                  <div>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: P.dark }}>{h.name}</div>
+                    <div style={{ fontSize: 13, color: P.dark, opacity: 0.75, marginTop: 8 }}>
+                      📍 {h.location}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 40 }}>🐄</div>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 20 }}>
+                  <div>
+                    <div style={{ fontSize: 28, fontWeight: 800, color: P.dark }}>{inHerd.length || h.count}</div>
+                    <div style={{ fontSize: 11, color: P.dark, opacity: 0.7 }}>голов</div>
+                  </div>
+                  {alerts > 0 && (
+                    <div style={{
+                      background: P.white, padding: "6px 12px", borderRadius: 10,
+                      fontSize: 11, fontWeight: 700, color: P.red, height: "fit-content",
+                    }}>⚠ {alerts}</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ================= ФОРМА ДОБАВЛЕНИЯ КОРОВЫ =================
+function AddCowModal({ onClose, onAdd }) {
+  const [name, setName] = useState("");
+  const [breed, setBreed] = useState("Голштинская");
+  const [earTag, setEarTag] = useState("");
+  const [age, setAge] = useState("");
+  const [weight, setWeight] = useState(500);
+
+  const handleSubmit = () => {
+    if (!name || !earTag) return;
+    onAdd({
+      id: Math.floor(Math.random() * 900) + 200,
+      name, breed, earTag, age: age || "2 года", weight,
+      inside: true, lat: 55.7558, lon: 37.6173,
+      vitals: { hr: 70, resp: 24, temp: 38.6, rum: 480, act: 50, hrv: 30 },
+      health: { score: 85, risks: [], meds: [] },
+      vax: [],
+      collar: { id: "NEW" + Math.floor(Math.random() * 1000), battery: 3800, signal: 4, lastSync: "1 мин", firmware: "v1.0" },
+      stats: { week: [50,50,50,50,50,50,50], month: Array(30).fill(50), half: Array(30).fill(50), year: Array(12).fill(50) },
+    });
+  };
+
+  return (
+    <Modal title="➕ Добавить корову" onClose={onClose}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div>
+          <label style={{ fontSize: 12, fontWeight: 700, color: P.dark, display: "block", marginBottom: 6 }}>
+            Кличка *
+          </label>
+          <input value={name} onChange={e => setName(e.target.value)}
+            placeholder="Например, Ромашка"
+            style={{
+              width: "100%", padding: "10px 14px", border: `2px solid ${P.sage}`,
+              borderRadius: 10, fontSize: 13, outline: "none", color: P.dark,
+            }} />
+        </div>
+        <div>
+          <label style={{ fontSize: 12, fontWeight: 700, color: P.dark, display: "block", marginBottom: 6 }}>
+            Порода
+          </label>
+          <select value={breed} onChange={e => setBreed(e.target.value)}
+            style={{
+              width: "100%", padding: "10px 14px", border: `2px solid ${P.sage}`,
+              borderRadius: 10, fontSize: 13, outline: "none", color: P.dark,
+              cursor: "pointer",
+            }}>
+            <option>Голштинская</option>
+            <option>Симментальская</option>
+            <option>Чёрно-пёстрая</option>
+            <option>Айрширская</option>
+            <option>Красная степная</option>
+          </select>
+        </div>
+        <div>
+          <label style={{ fontSize: 12, fontWeight: 700, color: P.dark, display: "block", marginBottom: 6 }}>
+            Номер бирки *
+          </label>
+          <input value={earTag} onChange={e => setEarTag(e.target.value)}
+            placeholder="RU-00106"
+            style={{
+              width: "100%", padding: "10px 14px", border: `2px solid ${P.sage}`,
+              borderRadius: 10, fontSize: 13, outline: "none", color: P.dark,
+            }} />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: P.dark, display: "block", marginBottom: 6 }}>
+              Возраст
+            </label>
+            <input value={age} onChange={e => setAge(e.target.value)}
+              placeholder="3 года"
+              style={{
+                width: "100%", padding: "10px 14px", border: `2px solid ${P.sage}`,
+                borderRadius: 10, fontSize: 13, outline: "none", color: P.dark,
+              }} />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: P.dark, display: "block", marginBottom: 6 }}>
+              Вес, кг: <b>{weight}</b>
+            </label>
+            <input type="range" min={200} max={900} value={weight}
+              onChange={e => setWeight(+e.target.value)}
+              style={{ width: "100%", accentColor: P.dark }} />
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+          <button onClick={onClose} style={{
+            flex: 1, padding: 14, background: P.sage, color: P.dark,
+            border: "none", borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer",
+          }}>Отмена</button>
+          <button onClick={handleSubmit} disabled={!name || !earTag} style={{
+            flex: 2, padding: 14, background: name && earTag ? P.dark : P.gray,
+            color: P.white, border: "none", borderRadius: 10, fontWeight: 700,
+            fontSize: 13, cursor: name && earTag ? "pointer" : "not-allowed",
+          }}>Добавить</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+// ================= КАРТОЧКА КОРОВЫ =================
+function CowDetail({ cow, tab, setTab, onBack, onUpdate, showToast }) {
+  const tabs = [
+    { id: "vitals", l: "❤ Показатели" },
+    { id: "health", l: "🩺 Здоровье" },
+    { id: "vax",    l: "💉 Прививки" },
+    { id: "geo",    l: "📍 Геолокация" },
+    { id: "collar", l: "📡 Ошейник" },
+  ];
+  return (
+    <div style={{ background: P.bg, minHeight: "100vh", padding: "40px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div onClick={onBack} style={{
+          cursor: "pointer", color: P.gray, fontSize: 13, marginBottom: 12, fontWeight: 600,
+        }}>← Назад к стаду</div>
+
+        <div style={{
+          background: P.dark, color: P.white, borderRadius: 20, padding: 32, marginBottom: 20,
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
+            <div>
+              <div style={{ fontSize: 32, fontWeight: 800 }}>#{cow.id} {cow.name}</div>
+              <div style={{ fontSize: 13, opacity: 0.75, marginTop: 8 }}>
+                {cow.breed} · {cow.age} · {cow.weight} кг · {cow.earTag}
+              </div>
+            </div>
+            <div style={{
+              background: cow.inside ? P.green : P.red, padding: "8px 16px",
+              borderRadius: 12, fontSize: 12, fontWeight: 700,
+            }}>{cow.inside ? "● В загоне" : "⚠ Вне загона"}</div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+          {tabs.map(t => (
+            <div key={t.id} onClick={() => setTab(t.id)}
+              style={{
+                padding: "12px 20px", borderRadius: 12, cursor: "pointer",
+                background: tab === t.id ? P.dark : P.white,
+                color: tab === t.id ? P.white : P.dark,
+                fontSize: 13, fontWeight: 700,
+                boxShadow: "0 2px 8px rgba(61,90,74,0.06)",
+                transition: "0.2s",
+              }}>{t.l}</div>
+          ))}
+        </div>
+
+        {tab === "vitals" && <TabVitals cow={cow} />}
+        {tab === "health" && <TabHealth cow={cow} />}
+        {tab === "vax" && <TabVax cow={cow} onUpdate={onUpdate} showToast={showToast} />}
+        {tab === "geo" && <TabGeo cow={cow} />}
+        {tab === "collar" && <TabCollar cow={cow} showToast={showToast} />}
+      </div>
+    </div>
+  );
+}
+
+function TabVitals({ cow }) {
+  const items = [
+    { k: "hr",   icon: "❤",  l: "Пульс" },
+    { k: "resp", icon: "🫁", l: "Дыхание" },
+    { k: "temp", icon: "🌡", l: "Температура" },
+    { k: "rum",  icon: "🍃", l: "Жвачка" },
+    { k: "act",  icon: "🏃", l: "Активность" },
+    { k: "hrv",  icon: "📈", l: "ВСР" },
+  ];
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+      {items.map(i => {
+        const v = cow.vitals[i.k];
+        const s = vStatus(i.k, v);
+        return (
+          <div key={i.k} style={{
+            background: P.white, borderRadius: 16, padding: 20,
+            boxShadow: "0 2px 8px rgba(61,90,74,0.06)",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ fontSize: 24 }}>{i.icon}</div>
+              <div style={{
+                fontSize: 10, fontWeight: 700, color: P.white, padding: "4px 10px",
+                borderRadius: 10, background: s.c, height: "fit-content",
+              }}>{s.t}</div>
+            </div>
+            <div style={{ fontSize: 12, color: P.gray, marginTop: 12 }}>{i.l}</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: P.dark }}>
+              {v} <span style={{ fontSize: 12, color: P.gray, fontWeight: 400 }}>{norms[i.k].l}</span>
+            </div>
+            <div style={{ fontSize: 11, color: P.gray, marginTop: 6 }}>
+              Норма: {norms[i.k].min}–{norms[i.k].max}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function TabHealth({ cow }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 16 }}>
+      <div style={{ background: P.white, borderRadius: 16, padding: 32, textAlign: "center" }}>
+        <div style={{ fontSize: 12, color: P.gray }}>Индекс здоровья</div>
+        <div style={{
+          fontSize: 72, fontWeight: 900, marginTop: 8,
+          color: cow.health.score >= 80 ? P.green : cow.health.score >= 60 ? P.amber : P.red,
+        }}>{cow.health.score}</div>
+        <div style={{ fontSize: 12, color: P.gray }}>из 100</div>
+        <div style={{
+          marginTop: 16, height: 12, background: P.sage, borderRadius: 6, overflow: "hidden",
+        }}>
+          <div style={{
+            width: `${cow.health.score}%`, height: "100%",
+            background: cow.health.score >= 80 ? P.green : cow.health.score >= 60 ? P.amber : P.red,
+            transition: "width 1s",
+          }} />
+        </div>
+      </div>
+      <div>
+        <div style={{ background: P.white, borderRadius: 16, padding: 24, marginBottom: 12 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: P.dark, marginBottom: 16 }}>Прогноз рисков</div>
+          {cow.health.risks.length === 0 ? (
+            <div style={{ fontSize: 13, color: P.green, fontWeight: 600 }}>✓ Рисков не выявлено</div>
+          ) : cow.health.risks.map((r, i) => (
+            <div key={i} style={{ marginBottom: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
+                <span style={{ color: P.dark, fontWeight: 600 }}>{r.l}</span>
+                <span style={{ color: r.p > 30 ? P.red : P.amber, fontWeight: 700 }}>{r.p}%</span>
+              </div>
+              <div style={{ height: 8, background: P.sage, borderRadius: 4, overflow: "hidden" }}>
+                <div style={{
+                  width: `${r.p}%`, height: "100%",
+                  background: r.p > 30 ? P.red : P.amber,
+                }} />
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ background: P.white, borderRadius: 16, padding: 24 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: P.dark, marginBottom: 16 }}>Медикаменты</div>
+          {cow.health.meds.length === 0 ? (
+            <div style={{ fontSize: 13, color: P.gray }}>Не назначены</div>
+          ) : cow.health.meds.map((m, i) => (
+            <div key={i} style={{ padding: 12, background: P.cream, borderRadius: 10, marginBottom: 8 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: P.dark }}>{m.n}</div>
+              <div style={{ fontSize: 12, color: P.gray, marginTop: 4 }}>{m.d} → {m.u}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TabVax({ cow, onUpdate, showToast }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [date, setDate] = useState("");
+  const [until, setUntil] = useState("");
+
+  const handleAdd = () => {
+    if (!name || !date || !until) return;
+    const today = new Date().toISOString().split("T")[0];
+    let status = "valid";
+    if (until < today) status = "expired";
+    else if (new Date(until) - new Date() < 30 * 24 * 3600 * 1000) status = "expiring";
+    const updated = {
+      ...cow,
+      vax: [...cow.vax, { n: name, d: date, u: until, s: status }],
+    };
+    onUpdate(updated);
+    setOpen(false);
+    setName(""); setDate(""); setUntil("");
+    showToast("Прививка добавлена", "success");
+  };
+
+  return (
+    <div>
+      <div style={{
+        background: P.white, borderRadius: 16, padding: 20, marginBottom: 16,
+        display: "flex", justifyContent: "space-around",
+      }}>
+        {[
+          { l: "Всего",      v: cow.vax.length, c: P.dark },
+          { l: "Активны",    v: cow.vax.filter(x => x.s === "valid").length, c: P.green },
+          { l: "Истекают",   v: cow.vax.filter(x => x.s === "expiring").length, c: P.amber },
+          { l: "Просрочены", v: cow.vax.filter(x => x.s === "expired").length, c: P.red },
+        ].map((s, i) => (
+          <div key={i} style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 32, fontWeight: 800, color: s.c }}>{s.v}</div>
+            <div style={{ fontSize: 11, color: P.gray }}>{s.l}</div>
+          </div>
+        ))}
+      </div>
+      {cow.vax.map((v, i) => {
+        const s = vaxStatus(v.s);
+        return (
+          <div key={i} style={{
+            background: P.white, borderRadius: 16, padding: 20, marginBottom: 10,
+            borderLeft: `5px solid ${s.c}`,
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: P.dark }}>💉 {v.n}</div>
+              <div style={{
+                fontSize: 11, fontWeight: 700, color: P.white,
+                padding: "4px 12px", borderRadius: 10, background: s.c,
+              }}>{s.t}</div>
+            </div>
+            <div style={{ fontSize: 12, color: P.gray, marginTop: 8 }}>
+              Сделана: {v.d} · Действует до: <b style={{ color: s.c }}>{v.u}</b>
+            </div>
+          </div>
+        );
+      })}
+      <button onClick={() => setOpen(true)} style={{
+        width: "100%", padding: 14, marginTop: 10, background: P.mint,
+        color: P.dark, border: "none", borderRadius: 12, fontWeight: 700,
+        fontSize: 14, cursor: "pointer",
+      }}>+ Добавить прививку</button>
+
+      {open && (
+        <Modal title="💉 Новая прививка" onClose={() => setOpen(false)}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: P.dark, display: "block", marginBottom: 6 }}>
+                Название *
+              </label>
+              <input value={name} onChange={e => setName(e.target.value)}
+                placeholder="Ящур, Пастереллёз..."
+                style={{
+                  width: "100%", padding: "10px 14px", border: `2px solid ${P.sage}`,
+                  borderRadius: 10, fontSize: 13, outline: "none", color: P.dark,
+                }} />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: P.dark, display: "block", marginBottom: 6 }}>
+                  Дата вакцинации *
+                </label>
+                <input type="date" value={date} onChange={e => setDate(e.target.value)}
+                  style={{
+                    width: "100%", padding: "10px 14px", border: `2px solid ${P.sage}`,
+                    borderRadius: 10, fontSize: 13, outline: "none", color: P.dark,
+                  }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: P.dark, display: "block", marginBottom: 6 }}>
+                  Действует до *
+                </label>
+                <input type="date" value={until} onChange={e => setUntil(e.target.value)}
+                  style={{
+                    width: "100%", padding: "10px 14px", border: `2px solid ${P.sage}`,
+                    borderRadius: 10, fontSize: 13, outline: "none", color: P.dark,
+                  }} />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button onClick={() => setOpen(false)} style={{
+                flex: 1, padding: 14, background: P.sage, color: P.dark,
+                border: "none", borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer",
+              }}>Отмена</button>
+              <button onClick={handleAdd} disabled={!name || !date || !until} style={{
+                flex: 2, padding: 14, background: name && date && until ? P.dark : P.gray,
+                color: P.white, border: "none", borderRadius: 10, fontWeight: 700,
+                fontSize: 13, cursor: name && date && until ? "pointer" : "not-allowed",
+              }}>Сохранить</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function TabGeo({ cow }) {
+  const [zoom, setZoom] = useState(1);
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16 }}>
+      <div style={{
+        background: P.sage, borderRadius: 16, height: 420, position: "relative", overflow: "hidden",
+      }}>
+        <div style={{
+          position: "absolute", inset: 0,
+          transform: `scale(${zoom})`,
+          transition: "transform 0.3s",
+          background: `radial-gradient(circle at 30% 40%, ${P.mint} 0%, transparent 50%),
+                       radial-gradient(circle at 70% 60%, ${P.lavender} 0%, transparent 50%)`,
+        }} />
+        <div style={{
+          position: "absolute", left: "15%", top: "25%", width: "55%", height: "55%",
+          border: `2px dashed ${P.dark}`, borderRadius: "50%",
+          background: "rgba(212,233,221,0.4)",
+          transform: `scale(${zoom})`, transformOrigin: "center",
+          transition: "transform 0.3s",
+        }} />
+        <div style={{
+          position: "absolute",
+          left: cow.inside ? "40%" : "78%",
+          top: cow.inside ? "48%" : "20%",
+          width: 24, height: 24, borderRadius: 12,
+          background: cow.inside ? P.green : P.red,
+          border: `3px solid ${P.white}`,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+          transform: `scale(${zoom})`, transition: "0.3s",
+        }} />
+        <div style={{
+          position: "absolute", left: 16, top: 16, background: P.white,
+          padding: "6px 14px", borderRadius: 10, fontSize: 12, fontWeight: 700, color: P.dark,
+        }}>🗺 Пастбище</div>
+
+        {/* Кнопки зума */}
+        <div style={{
+          position: "absolute", right: 16, bottom: 16,
+          display: "flex", flexDirection: "column", gap: 4,
+        }}>
+          <button onClick={() => setZoom(z => Math.min(z + 0.3, 3))} style={{
+            width: 36, height: 36, borderRadius: 10, background: P.white,
+            border: "none", fontSize: 18, fontWeight: 700, cursor: "pointer",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)", color: P.dark,
+          }}>+</button>
+          <button onClick={() => setZoom(1)} style={{
+            width: 36, height: 36, borderRadius: 10, background: P.white,
+            border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)", color: P.dark,
+          }}>1:1</button>
+          <button onClick={() => setZoom(z => Math.max(z - 0.3, 0.5))} style={{
+            width: 36, height: 36, borderRadius: 10, background: P.white,
+            border: "none", fontSize: 18, fontWeight: 700, cursor: "pointer",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)", color: P.dark,
+          }}>−</button>
+        </div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ background: P.white, borderRadius: 16, padding: 20 }}>
+          <div style={{ fontSize: 11, color: P.gray }}>Координаты</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: P.dark, marginTop: 4 }}>
+            {cow.lat.toFixed(4)}<br />{cow.lon.toFixed(4)}
+          </div>
+        </div>
+        <div style={{ background: cow.inside ? P.mint : P.peach, borderRadius: 16, padding: 20 }}>
+          <div style={{ fontSize: 11, color: P.dark, opacity: 0.7 }}>Статус</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: P.dark, marginTop: 4 }}>
+            {cow.inside ? "✓ Внутри" : "⚠ Вне загона"}
+          </div>
+        </div>
+        <div style={{ background: P.white, borderRadius: 16, padding: 20 }}>
+          <div style={{ fontSize: 11, color: P.gray }}>Зум</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: P.dark, marginTop: 4 }}>
+            {zoom.toFixed(1)}×
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TabCollar({ cow, showToast }) {
+  const [sound, setSound] = useState(true);
+  const [impulse, setImpulse] = useState(false);
+  const [interval, setInterval] = useState(15);
+  const [impulseConfirm, setImpulseConfirm] = useState(false);
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div style={{ background: P.white, borderRadius: 16, padding: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize: 11, color: P.gray }}>Ошейник</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: P.dark }}>#{cow.collar.id}</div>
+          </div>
+          <div style={{
+            background: P.green, color: P.white, padding: "6px 14px",
+            borderRadius: 12, fontSize: 11, fontWeight: 700, height: "fit-content",
+          }}>● ОНЛАЙН</div>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-around" }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: P.dark }}>{cow.collar.battery}</div>
+            <div style={{ fontSize: 10, color: P.gray }}>мВ</div>
+            <div style={{
+              width: 60, height: 6, background: P.sage, borderRadius: 3, marginTop: 6,
+              overflow: "hidden",
+            }}>
+              <div style={{
+                width: `${(cow.collar.battery / 4200) * 100}%`, height: "100%",
+                background: cow.collar.battery > 3500 ? P.green : P.amber,
+              }} />
+            </div>
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: P.dark }}>
+              {"●".repeat(cow.collar.signal)}
+            </div>
+            <div style={{ fontSize: 10, color: P.gray }}>сигнал</div>
+          </div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: P.dark }}>{cow.collar.lastSync}</div>
+            <div style={{ fontSize: 10, color: P.gray }}>синхр.</div>
+          </div>
+        </div>
+        <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 8 }}>
+          <button onClick={() => showToast("Команда синхронизации отправлена", "info")}
+            style={{
+              padding: 12, background: P.mint, color: P.dark, border: "none",
+              borderRadius: 10, fontWeight: 700, fontSize: 12, cursor: "pointer",
+            }}>🔄 Синхронизировать</button>
+          <button onClick={() => setImpulseConfirm(true)}
+            style={{
+              padding: 12, background: P.peach, color: P.dark, border: "none",
+              borderRadius: 10, fontWeight: 700, fontSize: 12, cursor: "pointer",
+            }}>⚡ Отправить импульс</button>
+        </div>
+      </div>
+      <div style={{ background: P.white, borderRadius: 16, padding: 24 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: P.dark, marginBottom: 16 }}>Настройки</div>
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize: 13, color: P.dark, fontWeight: 600 }}>Звуковой сигнал</div>
+            <div style={{ fontSize: 11, color: P.gray }}>Перед импульсом</div>
+          </div>
+          <div onClick={() => { setSound(!sound); showToast(sound ? "Звук выкл" : "Звук вкл", "info"); }}
+            style={{
+              width: 48, height: 26, borderRadius: 13,
+              background: sound ? P.green : P.sage, cursor: "pointer",
+              position: "relative", transition: "0.2s",
+            }}>
+            <div style={{
+              width: 22, height: 22, borderRadius: 11, background: P.white,
+              position: "absolute", top: 2, left: sound ? 24 : 2, transition: "0.2s",
+            }} />
+          </div>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize: 13, color: P.dark, fontWeight: 600 }}>Электроимпульс</div>
+            <div style={{ fontSize: 11, color: P.gray }}>При пересечении границы</div>
+          </div>
+          <div onClick={() => { setImpulse(!impulse); showToast(impulse ? "Импульс выкл" : "Импульс вкл", "warning"); }}
+            style={{
+              width: 48, height: 26, borderRadius: 13,
+              background: impulse ? P.red : P.sage, cursor: "pointer",
+              position: "relative", transition: "0.2s",
+            }}>
+            <div style={{
+              width: 22, height: 22, borderRadius: 11, background: P.white,
+              position: "absolute", top: 2, left: impulse ? 24 : 2, transition: "0.2s",
+            }} />
+          </div>
+        </div>
+
+        <div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+            <div style={{ fontSize: 13, color: P.dark, fontWeight: 600 }}>Интервал отправки</div>
+            <div style={{ fontSize: 13, fontWeight: 800, color: P.dark }}>{interval} мин</div>
+          </div>
+          <input type="range" min={5} max={60} step={5} value={interval}
+            onChange={e => setInterval(+e.target.value)}
+            style={{ width: "100%", accentColor: P.dark }} />
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: P.gray, marginTop: 4 }}>
+            <span>5 мин</span><span>60 мин</span>
+          </div>
+        </div>
+      </div>
+
+      {impulseConfirm && (
+        <Modal title="⚡ Подтвердите действие" onClose={() => setImpulseConfirm(false)}>
+          <div style={{ fontSize: 14, color: P.dark, lineHeight: 1.6, marginBottom: 20 }}>
+            Вы собираетесь отправить <b>электрический импульс</b> на ошейник
+            коровы <b>#{cow.id} {cow.name}</b>. Это действие необратимо.
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => setImpulseConfirm(false)} style={{
+              flex: 1, padding: 14, background: P.sage, color: P.dark,
+              border: "none", borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer",
+            }}>Отмена</button>
+            <button onClick={() => {
+              setImpulseConfirm(false);
+              showToast("Импульс отправлен", "warning");
+            }} style={{
+              flex: 1, padding: 14, background: P.red, color: P.white,
+              border: "none", borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: "pointer",
+            }}>Подтвердить</button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ================= СТАТИСТИКА =================
+function PageStats({ cows, showToast }) {
+  const [period, setPeriod] = useState("week");
+  const [metric, setMetric] = useState("act");
+  const [selectedBar, setSelectedBar] = useState(null);
+
+  const periods = [
+    { id: "week", l: "Неделя" },
+    { id: "month", l: "Месяц" },
+    { id: "half", l: "Полгода" },
+    { id: "year", l: "Год" },
+  ];
+  const metrics = [
+    { id: "act", l: "Активность", u: "шаг/мин" },
+    { id: "hr", l: "Пульс", u: "уд/мин" },
+    { id: "temp", l: "Температура", u: "°C" },
+  ];
+
+  const allStats = cows.flatMap(c => c.stats[period]);
+  const avg = Math.round(allStats.reduce((a, b) => a + b, 0) / allStats.length);
+  const max = Math.max(...allStats);
+  const min = Math.min(...allStats);
+  const visible = allStats.slice(0, period === "week" ? 7 : period === "year" ? 12 : 30);
+
+  const exportCSV = () => {
+    const rows = [["ID", "Кличка", "Порода", "Пульс", "Температура", "Здоровье", "Статус"]];
+    cows.forEach(c => rows.push([
+      c.id, c.name, c.breed, c.vitals.hr, c.vitals.temp,
+      c.health.score, c.inside ? "В загоне" : "Вне",
+    ]));
+    const csv = rows.map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `herd-stats-${period}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("CSV-файл скачан", "success");
+  };
+
+  return (
+    <div style={{ background: P.bg, minHeight: "100vh", padding: "40px" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: P.dark }}>📊 Статистика</div>
+            <div style={{ fontSize: 14, color: P.gray, marginTop: 4 }}>Обзор по всем стадам</div>
+          </div>
+          <button onClick={exportCSV} style={{
+            background: P.dark, color: P.white, padding: "12px 20px", border: "none",
+            borderRadius: 12, fontWeight: 700, fontSize: 13, cursor: "pointer",
+          }}>📤 Экспорт CSV</button>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+          {periods.map(p => (
+            <div key={p.id} onClick={() => { setPeriod(p.id); setSelectedBar(null); }}
+              style={{
+                padding: "12px 22px", borderRadius: 12, cursor: "pointer",
+                background: period === p.id ? P.dark : P.white,
+                color: period === p.id ? P.white : P.dark,
+                fontSize: 13, fontWeight: 700,
+              }}>{p.l}</div>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+          {metrics.map(m => (
+            <div key={m.id} onClick={() => setMetric(m.id)}
+              style={{
+                padding: "10px 18px", borderRadius: 10, cursor: "pointer",
+                background: metric === m.id ? P.mint : P.white,
+                color: P.dark, fontSize: 12, fontWeight: 700,
+                border: metric === m.id ? `2px solid ${P.dark}` : "2px solid transparent",
+              }}>{m.l}</div>
+          ))}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
+          {[
+            { l: "Среднее", v: avg, c: P.mint },
+            { l: "Максимум", v: max, c: P.peach },
+            { l: "Минимум", v: min, c: P.lavender },
+          ].map((s, i) => (
+            <div key={i} style={{ background: s.c, borderRadius: 16, padding: 24, textAlign: "center" }}>
+              <div style={{ fontSize: 12, color: P.dark, opacity: 0.7 }}>{s.l}</div>
+              <div style={{ fontSize: 42, fontWeight: 900, color: P.dark, marginTop: 4 }}>{s.v}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ background: P.white, borderRadius: 16, padding: 24, marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: P.dark }}>
+              {metrics.find(m => m.id === metric).l} ({metrics.find(m => m.id === metric).u})
+            </div>
+            {selectedBar !== null && (
+              <div style={{ fontSize: 12, color: P.dark, background: P.mint, padding: "6px 12px", borderRadius: 8, fontWeight: 700 }}>
+                Точка #{selectedBar + 1}: <b>{visible[selectedBar]}</b>
+              </div>
+            )}
+          </div>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 200 }}>
+            {visible.map((v, i) => {
+              const h = ((v - min) / (max - min || 1)) * 100;
+              const isSelected = selectedBar === i;
+              return (
+                <div key={i} onClick={() => setSelectedBar(i)}
+                  style={{
+                    flex: 1, height: `${Math.max(h, 8)}%`, cursor: "pointer",
+                    background: isSelected
+                      ? `linear-gradient(180deg, ${P.amber}, ${P.red})`
+                      : `linear-gradient(180deg, ${P.mint}, ${P.green})`,
+                    borderRadius: "4px 4px 0 0",
+                    transition: "all 0.2s",
+                  }} />
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={{ background: P.white, borderRadius: 16, padding: 24 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: P.dark, marginBottom: 16 }}>По стадам</div>
+          {INITIAL_HERDS.map(h => {
+            const hc = cows.filter(c => c.herdId === h.id);
+            const vals = hc.flatMap(c => c.stats[period]);
+            const a = vals.length ? Math.round(vals.reduce((x, y) => x + y, 0) / vals.length) : 0;
+            const percent = max > 0 ? (a / max) * 100 : 0;
+            return (
+              <div key={h.id} style={{ marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: P.dark }}>{h.name}</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: P.dark }}>{a}</div>
+                </div>
+                <div style={{ height: 10, background: P.sage, borderRadius: 5, overflow: "hidden" }}>
+                  <div style={{
+                    width: `${percent}%`, height: "100%",
+                    background: h.accent, borderRadius: 5,
+                    transition: "width 0.6s",
+                  }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ================= О ПРОЕКТЕ =================
+function PageAbout() {
+  return (
+    <div style={{ background: P.bg, minHeight: "100vh", padding: "40px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div style={{ fontSize: 32, fontWeight: 800, color: P.dark, marginBottom: 8 }}>О проекте</div>
+        <div style={{ fontSize: 14, color: P.gray, marginBottom: 32 }}>Технологии, экономика, актуальность</div>
+
+        <div style={{ background: P.white, borderRadius: 20, padding: 32, marginBottom: 16 }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: P.dark, marginBottom: 20 }}>🛠 Технологический стек</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16 }}>
+            {[
+              { t: "ESP32-S3", d: "Микроконтроллер с Wi-Fi и BLE. Управляет всеми датчиками.", c: P.mint },
+              { t: "GPS NEO-6M", d: "Точность до 3 м. Работает через NMEA-протокол.", c: P.sky },
+              { t: "LoRa SX1276", d: "Дальность до 15 км. Потребление в 100 раз ниже GSM.", c: P.lavender },
+              { t: "MPU6050", d: "6-осевой акселерометр + гироскоп. Определяет активность.", c: P.peach },
+              { t: "MAX30102", d: "Пульсоксиметр. Измеряет пульс и сатурацию крови.", c: P.cream },
+              { t: "DS18B20", d: "Температурный датчик тела. Раннее выявление болезней.", c: P.sage },
+            ].map((x, i) => (
+              <div key={i} style={{ background: x.c, borderRadius: 14, padding: 20 }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: P.dark }}>{x.t}</div>
+                <div style={{ fontSize: 12, color: P.dark, opacity: 0.75, marginTop: 6, lineHeight: 1.6 }}>{x.d}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ background: P.white, borderRadius: 20, padding: 32, marginBottom: 16 }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: P.dark, marginBottom: 20 }}>🏗 Архитектура системы</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            {[
+              { e: "📡", t: "Ошейник", d: "ESP32 + GPS + LoRa" },
+              { e: "→", t: "", d: "LoRa 868 МГц" },
+              { e: "🖥", t: "Станция", d: "Raspberry Pi + Gateway" },
+              { e: "→", t: "", d: "Интернет" },
+              { e: "☁️", t: "Сервер", d: "FastAPI + SQLite" },
+              { e: "→", t: "", d: "HTTPS" },
+              { e: "💻", t: "Сайт", d: "React + Leaflet" },
+            ].map((s, i) => s.t ? (
+              <div key={i} style={{
+                flex: "1 1 130px", background: P.mint, borderRadius: 14,
+                padding: 20, textAlign: "center", minWidth: 130,
+              }}>
+                <div style={{ fontSize: 32 }}>{s.e}</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: P.dark, marginTop: 4 }}>{s.t}</div>
+                <div style={{ fontSize: 11, color: P.dark, opacity: 0.7, marginTop: 4 }}>{s.d}</div>
+              </div>
+            ) : (
+              <div key={i} style={{ fontSize: 24, color: P.gray }}>→</div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ background: P.white, borderRadius: 20, padding: 32 }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: P.dark, marginBottom: 20 }}>💰 Экономика проекта</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+            {[
+              { l: "Себестоимость ошейника", v: "4 000 ₽", c: P.mint },
+              { l: "Базовая станция", v: "200 000 ₽", c: P.lavender },
+              { l: "Разработка ПО", v: "400 000 ₽", c: P.peach },
+              { l: "Стартовые вложения (100 голов)", v: "~1 млн ₽", c: P.sky },
+              { l: "Стоимость на голову", v: "10 000 ₽", c: P.cream },
+              { l: "Аналог на Западе", v: "$250–350", c: P.sage },
+            ].map((x, i) => (
+              <div key={i} style={{ background: x.c, borderRadius: 14, padding: 20 }}>
+                <div style={{ fontSize: 11, color: P.dark, opacity: 0.7 }}>{x.l}</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: P.dark, marginTop: 6 }}>{x.v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ================= ГЛАВНЫЙ =================
+export default function App() {
+  const [page, setPage] = useState("home");
+  const [cows, setCows] = useState(INITIAL_COWS);
+  const [toast, setToast] = useState(null);
+  const [bellOpen, setBellOpen] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState("Только что");
+  const [refreshing, setRefreshing] = useState(false);
+
+  const showToast = (msg, type = "info") => setToast({ msg, type });
+
+  const notifications = [
+    ...(cows.filter(c => !c.inside).length > 0 ? [{
+      icon: "⚠️", title: `${cows.filter(c => !c.inside).length} коров вне загона`,
+      time: "5 минут назад",
+    }] : []),
+    ...(cows.filter(c => c.health.score < 70).length > 0 ? [{
+      icon: "🩺", title: `${cows.filter(c => c.health.score < 70).length} коров требуют ветеринара`,
+      time: "12 минут назад",
+    }] : []),
+    ...(cows.flatMap(c => c.vax.filter(v => v.s === "expired")).length > 0 ? [{
+      icon: "💉", title: "Просроченные прививки",
+      time: "1 час назад",
+    }] : []),
+    { icon: "🔋", title: "Ошейник #A3F3 разряжен (3700 мВ)", time: "2 часа назад" },
+  ];
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+      setLastUpdate("Только что");
+      showToast("Данные обновлены", "success");
+    }, 1200);
+  };
+
+  const handleAddCow = (data) => {
+    setCows([...cows, data]);
+  };
+
+  return (
+    <div style={{ fontFamily: "Inter, sans-serif", minHeight: "100vh", position: "relative" }}>
+      <Header
+        page={page} setPage={setPage}
+        notifications={notifications}
+        bellOpen={bellOpen}
+        onBellClick={() => setBellOpen(!bellOpen)}
+        onRefresh={handleRefresh}
+        lastUpdate={lastUpdate}
+        refreshing={refreshing}
+      />
+      {bellOpen && (
+        <>
+          <div onClick={() => setBellOpen(false)} style={{
+            position: "fixed", inset: 0, zIndex: 150,
+          }} />
+          <NotificationsPanel notifications={notifications} onClose={() => setBellOpen(false)} />
+        </>
+      )}
+
+      {page === "home" && <PageHome setPage={setPage} />}
+      {page === "dashboard" && (
+        <PageDashboard
+          cows={cows} herds={INITIAL_HERDS}
+          onAddCow={handleAddCow}
+          showToast={showToast}
+        />
+      )}
+      {page === "stats" && <PageStats cows={cows} showToast={showToast} />}
+      {page === "about" && <PageAbout />}
+
+      {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+    </div>
+  );
+}
